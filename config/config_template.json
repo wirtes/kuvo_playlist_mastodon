@@ -1,0 +1,11 @@
+{
+  "_comment": "Rename to `config.json` and set configs here. Do not store in git.",
+  "playlist_url": "URL of the Spinitron HTML playlist you want to scrape",
+
+  "_comment": "Below is how often to check the playlist for changes, in seconds",
+  "frequency": 20,
+
+  "album_art_size": "768x768",
+  "mastodon_server": "URL of your Mastodon Server",
+  "mastodon_access_token": "Your Mastodon API access token for this application."
+}
