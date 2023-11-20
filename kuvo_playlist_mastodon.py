@@ -7,6 +7,7 @@ import json
 import requests
 from bs4 import BeautifulSoup
 from mastodon import Mastodon
+from datetime import datetime
 from pprint import pprint
 
 
@@ -52,7 +53,8 @@ def get_current_song(playlist_url, album_art_size):
         spin_item = soup.find('tr', class_='spin-item')
         # Check if the tag with class "spin-item" is found
         if spin_item:
-            pprint(spin_item)
+            # Uncomment to debug. This will print the scraped HTML section of the playlist so you can see what's going on
+            # pprint(spin_item)
             # Get the value of the "data-spin" attribute
             data_spin_value = spin_item.get('data-spin')
             # Convert it to a dict
@@ -61,7 +63,7 @@ def get_current_song(playlist_url, album_art_size):
             data_spin_item["time"] = spin_item.find('td', class_='spin-time').get_text(strip=True)
             if data_spin_item["i"] is None:
                 data_spin_item["i"] = data_spin_item["s"]
-                print(f"\n\n***** No ID on the song, so I set the i value to {data_spin_item['i']}\n\n")
+                print(f"***** No ID on the song, so I set the i value to {data_spin_item['i']}")
         else:
             data_spin_item = json.loads({"i":"notfound","a":"artist_not_found","s":"song_not_found","r":"album_not_found"})
         # Get the image source
@@ -102,7 +104,7 @@ def post_to_mastodon(current_song, server, access_token):
         mastodon.status_post(text_to_post, media_ids=[media['id']])
     else:
         mastodon.status_post(text_to_post)
-    print(f"\n\n***** Posted ID: {current_song['i']} to Mastodon.\n\n")
+    print(f"***** Posted ID: {current_song['s']} by {current_song['a']} to Mastodon at {formatted_datetime}")
     return
 
 
@@ -125,16 +127,21 @@ while True:
     state_file = working_directory + "/state"
     # Get the latest ID written to the state file
     last_post = read_state(state_file)
+    # Get the current date and time
+    current_datetime = datetime.now()
+    # Format the date and time into a human-readable form
+    formatted_datetime = current_datetime.strftime("%A, %B %d, %Y %I:%M:%S %p")
     # Check if we've already posted this song by comparing the ID we recieved from the scrape
     # with the one in the state file
     if current_song["i"] != last_post:
         # Make sure we got a good scrape of playlist page
         if current_song["i"] == "notfound":
-            print("\n\n***** Latest song not found.\n\n")
+            print(f"***** Latest song not found.  {formatted_datetime}")
         else:
             post_to_mastodon(current_song, config["mastodon_server"], config["mastodon_access_token"])
             write_state(state_file, current_song["i"])
     else:
-        print("\n\n***** Song already posted.\n\n")
+        print(f"***** Song: {current_song['s']} by {current_song['a']} already posted.  {formatted_datetime}")
 
     time.sleep(config["frequency"])
+
