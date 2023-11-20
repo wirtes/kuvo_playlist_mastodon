@@ -11,12 +11,14 @@ from datetime import datetime
 from pprint import pprint
 
 
+# Writes the state file
 def write_state(file_path, id):
     with open(file_path, 'w') as file:
         file.write(id)
     return
 
 
+# Reads the state from teh state file
 def read_state(file_path):
     try:
         with open(file_path, 'r') as file:
@@ -29,6 +31,7 @@ def read_state(file_path):
     return state
 
 
+# Loads the configuration file. Do all config in ./config/config.json & exclude from repo.
 def get_config():
     try:
         with open(working_directory + '/config/config.json', 'r') as file:
@@ -42,6 +45,10 @@ def get_config():
         print(f"An error occurred: {e}")
 
 
+# Scrapes the KUVO playlist page & gets the current artist, song, album, art & song ID
+# Sometimes the "Now Playing" song is more current on the KUVO playlist site. But it doesn't
+# contain the name of the album & it rarely contains album art. So I'm choosing to read from
+# the playlist table in order to get richer information.
 def get_current_song(playlist_url, album_art_size):
     # Get the playlist HTML from KUVO
     response = requests.get(playlist_url)
@@ -84,6 +91,7 @@ def get_current_song(playlist_url, album_art_size):
     return data_spin_item
 
 
+# Your standard posting to Mastodon function
 def post_to_mastodon(current_song, server, access_token):
     # Create an app on your Mastodon instance and get the access token
     mastodon = Mastodon(
