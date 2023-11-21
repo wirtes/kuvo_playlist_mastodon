@@ -8,6 +8,9 @@ import requests
 from bs4 import BeautifulSoup
 from mastodon import Mastodon
 from datetime import datetime
+import re
+from unidecode import unidecode
+import sqlite3
 from pprint import pprint
 
 
@@ -31,6 +34,35 @@ def read_state(file_path):
     return state
 
 
+# Write playlist item into database
+def write_database(song, db_file):
+    # Connect to SQLite database (creates a new DB if it doesn't exist)
+    conn = sqlite3.connect(db_file)
+    # Create a cursor object to interact with the database
+    cursor = conn.cursor()
+    # Create a table to store datetime
+    cursor.execute('''CREATE TABLE IF NOT EXISTS playlist (
+                        id INTEGER PRIMARY KEY,
+                        datetime_column DATETIME,
+                        playlist_id TEXT,
+                        dj TEXT,
+                        song TEXT,
+                        artist TEXT,
+                        album TEXT,
+                        album_art TEXT
+                        )''')
+    # Get current datetime
+    current_datetime = datetime.now()
+    # Create Insert Statement
+    sql = 'INSERT INTO playlist (datetime_column, playlist_id, dj, song, artist, album, album_art) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    # Insert current datetime into the table
+    cursor.execute(sql, (current_datetime, song["i"], song['dj'], song['s'], song['a'], song['r'], song['image']))
+    # Commit changes and close connection
+    conn.commit()
+    conn.close()
+    return
+
+
 # Loads the configuration file. Do all config in ./config/config.json & exclude from repo.
 def get_config():
     try:
@@ -43,6 +75,31 @@ def get_config():
         print(f"JSON decoding error: {e}")
     except Exception as e:
         print(f"An error occurred: {e}")
+
+
+# Function to fix the style of the time that the song played
+# example: changes "12:11 PM" to ""12:11pm"
+def format_time(time_str):
+    modified_time = time_str[:-3] + time_str[-3].replace(" ", "") + time_str[-2:].lower()
+    return modified_time
+
+
+# Cleanse the string
+def clean_string(string):
+    # Using unidecode to convertion UTF-8 diacriticals to standard ASCII because people probably won't type them in hashtags
+    text = unidecode(string)
+    # Remove any special characters, new lines, and spaces
+    clean_text = re.sub(r'[^a-zA-Z0-9]', '', text.replace('\n', '').replace(' ', ''))
+    return clean_text
+
+
+# Let's make some #hashtags!
+def make_hashtags(artist, song, dj, always_tag):
+    hashtag_string = "#" + clean_string(artist)
+    hashtag_string += " #" + clean_string(song)
+    hashtag_string += " #" + clean_string(dj)
+    hashtag_string += " " + always_tag
+    return hashtag_string
 
 
 # Scrapes the KUVO playlist page & gets the current artist, song, album, art & song ID
@@ -67,12 +124,14 @@ def get_current_song(playlist_url, album_art_size):
             # Convert it to a dict
             data_spin_item = json.loads(data_spin_value)
             # Pull the time the song was played out of the <td>
-            data_spin_item["time"] = spin_item.find('td', class_='spin-time').get_text(strip=True)
+            data_spin_item["time"] = format_time( spin_item.find('td', class_='spin-time').get_text(strip=True) )
             if data_spin_item["i"] is None:
                 data_spin_item["i"] = data_spin_item["s"]
                 print(f"***** No ID on the song, so I set the i value to {data_spin_item['i']}")
         else:
             data_spin_item = json.loads({"i":"notfound","a":"artist_not_found","s":"song_not_found","r":"album_not_found"})
+        # Find the DJ
+        data_spin_item["dj"] = soup.find('h3', 'show-title').get_text(strip=True).title()
         # Get the image source
         img_tag = spin_item.find('td', class_='spin-art').find('img')
         if img_tag:
@@ -88,7 +147,7 @@ def get_current_song(playlist_url, album_art_size):
             else:
                 data_spin_item["image_status"] = "image"
 
-    return data_spin_item
+    return data_spin_item 
 
 
 # Your standard posting to Mastodon function
@@ -100,6 +159,8 @@ def post_to_mastodon(current_song, server, access_token):
     )
     # Text content to post
     text_to_post = current_song["time"] + " " + current_song["s"] + " by " + current_song["a"] + " from " + current_song["r"]
+    text_to_post += "\n" + make_hashtags(current_song["a"], current_song["s"], current_song["dj"], config["hashtags"])
+    print(text_to_post)
     alt_text = "An image of the cover of the record album '" + current_song["r"] + "' by " + current_song["a"]
 
     # Check if there's an image included. If there is, post it
@@ -113,7 +174,7 @@ def post_to_mastodon(current_song, server, access_token):
     else:
         mastodon.status_post(text_to_post)
     print(f"***** Posted ID: {current_song['s']} by {current_song['a']} to Mastodon at {formatted_datetime}")
-    return
+    return 
 
 
 
@@ -148,6 +209,7 @@ while True:
         else:
             post_to_mastodon(current_song, config["mastodon_server"], config["mastodon_access_token"])
             write_state(state_file, current_song["i"])
+            write_database(current_song, working_directory + "/" + config["database"])
     else:
         print(f"***** Song: {current_song['s']} by {current_song['a']} already posted.  {formatted_datetime}")
 
