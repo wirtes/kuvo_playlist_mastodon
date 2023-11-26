@@ -170,36 +170,21 @@ def post_to_mastodon(current_song, server, access_token):
         # Upload the image and attach it to the status
         media = mastodon.media_post(image_data, mime_type='image/jpeg', description=alt_text)
         # Post the status with text and image attachment
-        mastodon.status_post(text_to_post, media_ids=[media['id']])
+        mastodon.status_post(status=text_to_post, media_ids=[media['id']], visibility="public")
     else:
-        mastodon.status_post(text_to_post)
+        mastodon.status_post(status=text_to_post, visibility="public")
     print(f"***** Posted ID: {current_song['s']} by {current_song['a']} to Mastodon at {formatted_datetime}")
     return 
 
 
-
-
-# Setup Global Variables:
-if len(sys.argv) > 1:
-    working_directory = sys.argv[1]
-    print (f"{working_directory} provided")
-    config = get_config()
-else:
-    print("No working directory argument provided. Exiting.\n")
-    sys.exit()
-
-# Iterate
-while True:
+def orchestration_function():
     # Get the information about the current song playing
     current_song = get_current_song(config["playlist_url"], config["album_art_size"])
     # pprint(current_song)
     state_file = working_directory + "/state"
     # Get the latest ID written to the state file
     last_post = read_state(state_file)
-    # Get the current date and time
-    current_datetime = datetime.now()
-    # Format the date and time into a human-readable form
-    formatted_datetime = current_datetime.strftime("%A, %B %d, %Y %I:%M:%S %p")
+
     # Check if we've already posted this song by comparing the ID we recieved from the scrape
     # with the one in the state file
     if current_song["i"] != last_post:
@@ -212,6 +197,26 @@ while True:
             write_database(current_song, working_directory + "/" + config["database"])
     else:
         print(f"***** Song: {current_song['s']} by {current_song['a']} already posted.  {formatted_datetime}")
+    return
 
-    time.sleep(config["frequency"])
+
+# Setup Global Variables:
+if len(sys.argv) > 1:
+    working_directory = sys.argv[1]
+    print (f"{working_directory} provided")
+    config = get_config()
+else:
+    print("No working directory argument provided. Exiting.\n")
+    sys.exit()
+
+for i in range(0, config["times_to_poll_per_minute"] - 1):
+    # Get the current date and time
+    current_datetime = datetime.now()
+    # Format the date and time into a human-readable form
+    formatted_datetime = current_datetime.strftime("%A, %B %d, %Y %I:%M:%S %p")
+    orchestration_function()
+    # Don't sleep after the last run 
+    if i < (config["times_to_poll_per_minute"] - 1):
+        time.sleep(60 / config["times_to_poll_per_minute"])
+
 
