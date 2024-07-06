@@ -56,7 +56,7 @@ def write_database(song, db_file):
     # Create Insert Statement
     sql = 'INSERT INTO playlist (datetime_column, playlist_id, dj, song, artist, album, album_art) VALUES (?, ?, ?, ?, ?, ?, ?)'
     # Insert current datetime into the table
-    cursor.execute(sql, (current_datetime, song["i"], song['dj'], song['s'], song['a'], song['r'], song['image']))
+    cursor.execute(sql, (current_datetime, song["i"], song['dj'].replace("\u200b", ""), song['s'], song['a'], song['r'], song['image']))
     # Commit changes and close connection
     conn.commit()
     conn.close()
