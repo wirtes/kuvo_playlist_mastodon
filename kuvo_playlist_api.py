@@ -5,7 +5,7 @@ import sqlite3
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-DB_PATH = '/home/pi/python/kuvo_playlist_mastodon/playlist.db'
+DB_PATH = '/home/pi/kuvo_playlist_mastodon/playlist.db'
 
 # def init_db():
 # 	conn = sqlite3.connect(DB_PATH)

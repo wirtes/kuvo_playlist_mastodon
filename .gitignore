@@ -3,6 +3,7 @@ config/config.json
 *.pyc
 cron_log.txt
 state
+playlist.db
 
 # EVERYTHING BELOW WAS THE GITHUB DEFAULT PYTHON STUFF:
 #
