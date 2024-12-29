@@ -8,6 +8,6 @@ There's a database included in the repository, `playlist.db`. I've only included
 
 ## Playlist API
 
-The `kuvo_playlist_api.py` file creates an API on port 5000. It has a `/songs_by_dj` endpoint which requires a `dj` URL parameter. This returns every song played by that DJ in the last 12 hours in the database. I intend to use this API to build playlists to go along with my radio recordings.
+The `kuvo_playlist_api.py` file creates an API on port 5000. It has a `/songs_by_dj` endpoint which requires a `dj` URL parameter. This returns every song played by that DJ in the last 12 hours in the database. I use this API to build playlists to go along with my radio recordings.
 
 
