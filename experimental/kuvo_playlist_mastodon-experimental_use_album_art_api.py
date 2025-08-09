@@ -14,6 +14,52 @@ import sqlite3
 from pprint import pprint
 
 
+def fetch_cover_800(artist: str, album: str, out_path: str,
+                    mbid_api_base: str = "http://macmini-local:8980",
+                    art_api_base: str = "http://macmini-local:8981",
+                    timeout: int = 20) -> str:
+    """
+    Look up MBID using the first API, then download 800px cover via the second API.
+
+    Returns:
+        The MBID string on success.
+
+    Raises:
+        requests.HTTPError for HTTP failures,
+        ValueError if MBID is missing,
+        OSError for file I/O issues.
+    """
+    # 1) Call MBID API
+    # payload = json.dumps({"artist": artist, "album": album}).encode("utf-8")
+    # files = {
+    #     "payload": ("payload.json", payload, "application/json")
+    # }
+    # mbid_url = f"{mbid_api_base}/mbid"
+    # r = requests.post(mbid_url, files=files, timeout=timeout)
+    # r.raise_for_status()
+# 
+    # data = r.json()
+    # mbid = data.get("mbid")
+    # if not mbid:
+    #     raise ValueError(f"MBID not found in response: {data}")
+# 
+    # # 2) Call Art API for 800px image
+    # art_url = f"{art_api_base}/art/{mbid}?size=800"
+    # with requests.get(art_url, stream=True, timeout=timeout) as resp:
+    #     resp.raise_for_status()
+    #     with open(out_path, "wb") as f:
+    #         for chunk in resp.iter_content(chunk_size=8192):
+    #             if chunk:
+    #                 f.write(chunk)
+# 
+    # return mbid
+
+# Example:
+# mbid = fetch_cover_800("Michael Jackson", "Thriller", "cover_800.jpg")
+# print("Downloaded MBID:", mbid)
+
+
+
 # Writes the state file
 def write_state(file_path, id):
     with open(file_path, 'w') as file:
@@ -134,18 +180,25 @@ def get_current_song(playlist_url, album_art_size):
         data_spin_item["dj"] = soup.find('h3', 'show-title').get_text(strip=True).title()
         # Get the image source
         img_tag = spin_item.find('td', class_='spin-art').find('img')
+        
         if img_tag:
             # Get the value of the "src" attribute
             src_attribute = img_tag.get('src')
             # Check if the "src" attribute exists
             if src_attribute:
                 # push album art link into data_spin_item and resize to size specified in config
+                
                 # data_spin_item["image"] = src_attribute.replace("170x170", album_art_size)
+                # print(data_spin_item["image"])
+                # data_spin_item["image"] = re.sub(r'/(\d+)x(\d+)(.*\.jpg)$', album_art_size, src_attribute)
                 data_spin_item["image"] = re.sub(
                     r'^(.*)/\d+x\d+(.*\.jpg)$',
                     r'\1/' + album_art_size + r'\2',
                     src_attribute
                 )
+
+                print(data_spin_item["image"])
+
                 
             # Check if there's generic art because there's no album image:
             if data_spin_item["image"] == "https://spinitron.com/static/pictures/placeholders/loudspeaker.svg":
